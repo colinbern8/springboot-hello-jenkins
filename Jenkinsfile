@@ -11,7 +11,10 @@ pipeline {
         NEXUS_URL = "localhost:8081"
         NEXUS_REPOSITORY = "maven-releases"
         NEXUS_CREDENTIAL_ID = "nexus-credentials"
-        ARTIFACT_VERSION = "${BUILD_NUMBER}"
+        GROUP_ID = "com.example"
+        ARTIFACT_ID = "springboot-hello"
+        VERSION = "1.0.0"
+        PACKAGING = "jar"
     }
     
     stages {
@@ -48,37 +51,41 @@ pipeline {
             steps {
                 echo 'Publishing artifact to Nexus Repository...'
                 script {
-                    pom = readMavenPom file: "pom.xml"
-                    filesByGlob = findFiles(glob: "target/*.${pom.packaging}")
-                    echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
-                    artifactPath = filesByGlob[0].path
-                    artifactExists = fileExists artifactPath
+                    def jarFile = "target/${ARTIFACT_ID}-${VERSION}.${PACKAGING}"
+                    def pomFile = "pom.xml"
                     
-                    if(artifactExists) {
-                        echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version}"
-                        
-                        nexusArtifactUploader(
-                            nexusVersion: NEXUS_VERSION,
-                            protocol: NEXUS_PROTOCOL,
-                            nexusUrl: NEXUS_URL,
-                            groupId: pom.groupId,
-                            version: pom.version,
-                            repository: NEXUS_REPOSITORY,
-                            credentialsId: NEXUS_CREDENTIAL_ID,
-                            artifacts: [
-                                [artifactId: pom.artifactId,
-                                 classifier: '',
-                                 file: artifactPath,
-                                 type: pom.packaging],
-                                [artifactId: pom.artifactId,
-                                 classifier: '',
-                                 file: "pom.xml",
-                                 type: "pom"]
+                    echo "=== Nexus Upload Details ==="
+                    echo "Artifact: ${jarFile}"
+                    echo "Group ID: ${GROUP_ID}"
+                    echo "Artifact ID: ${ARTIFACT_ID}"
+                    echo "Version: ${VERSION}"
+                    echo "==========================="
+                    
+                    nexusArtifactUploader(
+                        nexusVersion: NEXUS_VERSION,
+                        protocol: NEXUS_PROTOCOL,
+                        nexusUrl: NEXUS_URL,
+                        groupId: GROUP_ID,
+                        version: VERSION,
+                        repository: NEXUS_REPOSITORY,
+                        credentialsId: NEXUS_CREDENTIAL_ID,
+                        artifacts: [
+                            [
+                                artifactId: ARTIFACT_ID,
+                                classifier: '',
+                                file: jarFile,
+                                type: PACKAGING
+                            ],
+                            [
+                                artifactId: ARTIFACT_ID,
+                                classifier: '',
+                                file: pomFile,
+                                type: "pom"
                             ]
-                        )
-                    } else {
-                        error "*** File: ${artifactPath}, could not be found"
-                    }
+                        ]
+                    )
+                    
+                    echo "✓ Successfully uploaded ${ARTIFACT_ID}-${VERSION}.${PACKAGING} to Nexus"
                 }
             }
         }
@@ -95,11 +102,18 @@ pipeline {
     
     post {
         success {
-            echo 'Pipeline completed successfully!'
-            echo 'Artifact has been published to Nexus Repository'
+            echo '=========================================='
+            echo '   PIPELINE COMPLETED SUCCESSFULLY!      '
+            echo '=========================================='
+            echo "Artifact: ${ARTIFACT_ID}-${VERSION}.${PACKAGING}"
+            echo "Location: ${NEXUS_URL}/repository/${NEXUS_REPOSITORY}"
+            echo '=========================================='
         }
         failure {
-            echo 'Pipeline failed. Please check the logs.'
+            echo '=========================================='
+            echo '        PIPELINE FAILED!                 '
+            echo '=========================================='
+            echo 'Please check the logs above for details.'
         }
         always {
             echo 'Cleaning up workspace...'
