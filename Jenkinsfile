@@ -26,21 +26,21 @@ pipeline {
         stage('Build') {
             steps {
                 echo 'Building Spring Boot application...'
-                sh 'mvn clean package -DskipTests'
+                bat 'mvn clean package -DskipTests'
             }
         }
         
         stage('Test') {
             steps {
                 echo 'Running tests...'
-                sh 'mvn test'
+                bat 'mvn test'
             }
         }
         
         stage('Code Quality Analysis') {
             steps {
                 echo 'Running code quality checks...'
-                sh 'mvn verify'
+                bat 'mvn verify'
             }
         }
         
@@ -89,30 +89,3 @@ pipeline {
                         error "*** File: ${artifactPath}, could not be found"
                     }
                 }
-            }
-        }
-        
-        stage('Archive Artifacts') {
-            steps {
-                echo 'Archiving artifacts in Jenkins...'
-                archiveArtifacts artifacts: 'target/*.jar', 
-                                 fingerprint: true,
-                                 allowEmptyArchive: false
-            }
-        }
-    }
-    
-    post {
-        success {
-            echo 'Pipeline completed successfully!'
-            echo 'Artifact has been published to Nexus Repository'
-        }
-        failure {
-            echo 'Pipeline failed. Please check the logs.'
-        }
-        always {
-            echo 'Cleaning up workspace...'
-            cleanWs()
-        }
-    }
-}
